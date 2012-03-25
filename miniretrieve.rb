@@ -1,24 +1,26 @@
 #!/usr/bin/env ruby
 
-require 'rake'
-
 module Default
   QUERY_DIRECTORY = "queries"
   DOCUMENT_DIRECTORY = "documents"
 end
 
 class MiniRetrieve
+  attr_reader :query_list, :document_list, :document_index, :accumulator, :document_norm, :idf
   def initialize
-    @query_list = Hash.new # { filename: { term: count } }
-    @document_list = Hash.new # { filename: { term: count } }
+    @query_list     = Hash.new # { filename: { term: count } }
+    @document_list  = Hash.new # { filename: { term: count } }
     @document_index = Hash.new # { term: { filename: [[line#, token#], ... ] } }
+    @accumulator    = Hash.new # { filename: value }
+    @idf            = Hash.new # { term: value } inverse document frequency
+    @document_norm  = Hash.new 0.0 # { filename: value }
   end
 
   def run
     create_query_list
     create_documents_lists
-    puts @document_list
-    #calculate_IDF_and_norms
+    calculate_IDF_and_norms
+    print @document_norm
     #process_queries
     #print_results
   end
@@ -42,12 +44,16 @@ class MiniRetrieve
         list_token @document_list, filename, token
       end
     end
-
-    puts @document_index
   end
 
   def calculate_IDF_and_norms
+    @document_index.each do |term, o|
+      @idf[ term ] = idf( @document_list.length, document_frequency(term) )
+    end
 
+    @document_list.each do |filename, h|
+      document_norm filename
+    end
   end
 
   def process_queries
@@ -88,17 +94,44 @@ class MiniRetrieve
       index[ token ][ filename ] << [ line_number, token_number ]
     end
   end
-  
+
   def list_token( list, filename, token)
-        if list.key? filename
-          if list[ filename ].key? token
-            list[ filename ][ token ] += 1
-          else
-            list[ filename ][ token ] = 1
-          end
-        else
-          list[ filename ] = Hash.new
-        end
+    if list.key? filename
+      if list[ filename ].key? token
+        list[ filename ][ token ] += 1
+      else
+        list[ filename ][ token ] = 1
+      end
+    else
+      list[ filename ] = Hash.new
+    end
+  end
+
+  def idf( document_count, document_frequency )
+    Math.log( (1+document_count) / (1+document_frequency) )
+  end
+
+  def document_frequency( word )
+    frequency = 0
+
+    @document_index[ word ].each do |doc, index|
+      frequency += index.length
+    end
+
+    frequency
+  end
+
+  def document_norm( filename )
+    @document_list[ filename ].each do | word, occurrences|
+      a = occurrences * @idf[ word ]
+      if @document_norm.key? filename
+        @document_norm[ filename ] += a**2
+      else
+        @document_norm[ filename ] = a**2
+      end
+    end
+
+    @document_norm[ filename ] = Math.sqrt @document_norm[ filename ]
   end
 end
 
