@@ -6,12 +6,11 @@ module Default
 end
 
 class MiniRetrieve
-  attr_reader :query_list, :document_list, :document_index, :accumulator, :document_norm, :idf
+  attr_reader :query_list, :document_list, :document_index, :document_norm, :idf
   def initialize
     @query_list     = Hash.new # { filename: { term: count } }
     @document_list  = Hash.new # { filename: { term: count } }
     @document_index = Hash.new # { term: { filename: [[line#, token#], ... ] } }
-    @accumulator    = Hash.new # { filename: value }
     @idf            = Hash.new # { term: value } inverse document frequency
     @document_norm  = Hash.new 0.0 # { filename: value }
   end
@@ -20,8 +19,7 @@ class MiniRetrieve
     create_query_list
     create_documents_lists
     calculate_IDF_and_norms
-    print @document_norm
-    #process_queries
+    process_queries
     #print_results
   end
 
@@ -47,8 +45,8 @@ class MiniRetrieve
   end
 
   def calculate_IDF_and_norms
-    @document_index.each do |term, o|
-      @idf[ term ] = idf( @document_list.length, document_frequency(term) )
+    @document_index.each do |word, o|
+      @idf[ word ] = idf word
     end
 
     @document_list.each do |filename, h|
@@ -57,7 +55,29 @@ class MiniRetrieve
   end
 
   def process_queries
+    @accumulator    = Hash.new # { filename: value }
+    @query_list.each do |q_file, query|
+      q_norm = 0
+      query.each do | question, count |
+        @idf[ question ] = Math.log( 1 + @document_list.length ) unless @idf.key?( question )
+      b =  ( count * @idf[ question ] )
+        q_norm += b**2
 
+        if @document_index.key? question
+          @document_index[ question ].each do |filename, occurrences|
+            a = @document_list[ filename ][ question ] * @idf[ question ]
+            if @accumulator.key? filename
+              @accumulator[ filename ] += a * b
+            else
+              @accumulator[ filename ] = a * b
+            end
+          end
+        end
+      end
+      q_norm = Math.sqrt q_norm
+      # TODO Norm berechnen
+      # TODO query und accu zu Resultaten hinzufügen
+    end
   end
 
   def print_results
@@ -107,18 +127,8 @@ class MiniRetrieve
     end
   end
 
-  def idf( document_count, document_frequency )
-    Math.log( (1+document_count) / (1+document_frequency) )
-  end
-
-  def document_frequency( word )
-    frequency = 0
-
-    @document_index[ word ].each do |doc, index|
-      frequency += index.length
-    end
-
-    frequency
+  def idf( word )
+    Math.log( (1+@document_list.length) / (1+@document_index[ word ].length) )
   end
 
   def document_norm( filename )
