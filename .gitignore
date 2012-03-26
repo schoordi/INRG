@@ -65,3 +65,7 @@ dist/
 nbdist/
 nbactions.xml
 nb-configuration.xml
+
+# test documents and queries
+documents/
+queries/
