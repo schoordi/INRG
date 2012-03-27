@@ -1,5 +1,6 @@
 source :rubygems
 
-group :development do
+group :test do
   gem 'minitest'
+  gem 'guard-minitest'
 end
