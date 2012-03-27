@@ -7,41 +7,61 @@ end
 
 class MiniRetrieve
   attr_reader :query_list, :document_list, :document_index, :document_norm, :idf
-  def initialize
-    @query_list     = Hash.new # { filename: { term: count } }
+  def initialize( options = {} )
     @document_list  = Hash.new # { filename: { term: count } }
+    @query_list     = Hash.new # { filename: { term: count } }
     @document_index = Hash.new # { term: { filename: [[line#, token#], ... ] } }
     @idf            = Hash.new # { term: value } inverse document frequency
     @document_norm  = Hash.new 0.0 # { filename: value }
+
+    if options[ :documents ]
+      @document_list.merge! options[ :documents ] #Array
+      #TODO create index without line# or token#, or include line# and token# in the list.
+    end
+
+    if options[ :queries ]
+      @query_list.merge! options[ :queries ]
+    end
+
+    if options[ :document_list ]
+      @document_list.merge! tokenize_files_in_directory( options[ :document_list] ) #Directory
+      @document_index.merge! index_files_in_directory( options[ :document_list] )
+    end
+
+    if options[ :query_list ]
+      @query_list.merge! tokenize_files_in_directory( options[ :query_list ] )
+    end
+
   end
 
   def run
-    create_query_list
-    create_documents_lists
     calculate_IDF_and_norms
     process_queries
     #print_results
   end
 
-  def create_query_list ( options = {} )
-    queries = options[:directory] || Default::QUERY_DIRECTORY
+  def tokenize_files_in_directory ( directory )
+    list = Hash.new
 
-    Dir.glob(queries+"/*").each do |filename|
+    Dir.glob( directory + "/*" ).each do |filename|
       tokenize( filename ) do |token|
-        list_token @query_list, filename, token
+        list_token list, filename, token
       end
     end
+    
+    return list
   end
 
-  def create_documents_lists ( options = {} )
-    documents = options[:directory] || Default::DOCUMENT_DIRECTORY
+  def index_files_in_directory ( directory )
+    index = Hash.new
 
-    Dir.glob(documents+"/*").each do |filename|
+    Dir.glob( directory + "/*" ).each do |filename|
       tokenize_with_indices( filename ) do |token, l_index, t_index|
-        index_token @document_index, token, filename, l_index, t_index
-        list_token @document_list, filename, token
+        index_token index, token, filename, l_index, t_index
       end
     end
+
+    return index
   end
 
   def calculate_IDF_and_norms
