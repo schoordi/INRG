@@ -96,6 +96,7 @@ class MiniRetrieve
       end
       q_norm = Math.sqrt q_norm
       # TODO Norm berechnen
+      #SEVI ISCH SOWAS VO OBERKRASS, WAS FÜR EN RAIM#
       # TODO query und accu zu Resultaten hinzufügen
     end
   end
