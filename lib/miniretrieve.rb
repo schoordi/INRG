@@ -36,7 +36,7 @@ class MiniRetrieve
 
   def run
     calculate_IDF_and_norms
-    process_queries
+    #process_queries
     #print_results
   end
 
@@ -66,7 +66,7 @@ class MiniRetrieve
 
   def calculate_IDF_and_norms
     @document_index.each do |word, o|
-      @idf[ word ] = idf word
+      @idf[ word ] =calculate_idf word
     end
 
     @document_list.each do |filename, h|
@@ -147,7 +147,7 @@ class MiniRetrieve
     end
   end
 
-  def idf( word )
+  def calculate_idf( word )
     Math.log( (1+@document_list.length) / (1+@document_index[ word ].length) )
   end
 
